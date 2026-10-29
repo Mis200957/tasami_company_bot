@@ -72,7 +72,7 @@
   var ACTION = { setup: 'إنشاء المدير', login: 'تسجيل دخول', login_failed: 'محاولة دخول خاطئة', supplier_save: 'تعديل مورد', merchant_save: 'تعديل تاجر',
     takeover_start: 'إيقاف البوت ودخول موظف', takeover_end: 'إرجاع المحادثة للبوت', send_message: 'رسالة يدوية', outbox_approve: 'اعتماد رسالة',
     outbox_cancel: 'إلغاء رسالة', outbox_approve_all: 'اعتماد كل الرسائل', price_approve: 'اعتماد سعر', price_reject: 'رفض سعر',
-    setting_save: 'تغيير إعداد', outbox_retry: 'إعادة محاولة إرسال', user_save: 'تعديل مستخدم', change_password: 'تغيير كلمة المرور' };
+    setting_save: 'تغيير إعداد', outbox_retry: 'إعادة محاولة إرسال', pricing_rule_save: 'تعديل نسبة ربح', pricing_rule_delete: 'حذف نسبة ربح', sell_price_apply: 'اعتماد سعر بيع', sell_price_apply_all: 'اعتماد كل أسعار البيع', user_save: 'تعديل مستخدم', change_password: 'تغيير كلمة المرور' };
   function pill(map, k) { var v = map[k] || [k, '']; return '<span class="pill ' + v[1] + '">' + esc(v[0]) + '</span>'; }
   function outPill(o) {
     var p = pill(OUT, o.status);
@@ -117,7 +117,7 @@
   // ------------------------------------------------------------ shell
   var VIEWS = [
     ['home', 'الرئيسية'], ['outbox', 'الرسائل الصادرة'], ['suppliers', 'الموردون'], ['merchants', 'التجار'],
-    ['prices', 'اعتماد الأسعار'], ['settings', 'الإعدادات', true], ['users', 'المستخدمون', true], ['audit', 'سجل العمليات', true]
+    ['prices', 'اعتماد الأسعار'], ['pricing', 'التسعير'], ['settings', 'الإعدادات', true], ['users', 'المستخدمون', true], ['audit', 'سجل العمليات', true]
   ];
   function renderShell() {
     app.innerHTML = '<div class="shell"><aside class="side"><div class="brand"><div class="mark">' + LOGO + '</div><div><b>تسامي الوطنية</b><span class="label">لوحة التحكم</span></div></div>' +
@@ -142,7 +142,7 @@
     state.view = view; renderNav();
     var main = document.getElementById('main');
     main.innerHTML = '<p class="muted">جارٍ التحميل…</p>';
-    ({ home: viewHome, outbox: viewOutbox, suppliers: viewSuppliers, merchants: viewMerchants, prices: viewPrices,
+    ({ home: viewHome, outbox: viewOutbox, suppliers: viewSuppliers, merchants: viewMerchants, prices: viewPrices, pricing: viewPricing,
        settings: viewSettings, users: viewUsers, audit: viewAudit }[view] || viewHome)(main);
   }
   function refreshCounts(r) {
@@ -444,6 +444,102 @@
           };
         });
       });
+    });
+  }
+
+  // ------------------------------------------------------------ pricing
+  var pricingOnlyChanges = false;
+  function viewPricing(main) {
+    api('pricing').then(function (r) {
+      if (!r.ok) { main.innerHTML = '<p class="empty">' + esc(errText(r)) + '</p>'; return; }
+      var s = r.settings || {}, rows = r.rows || [], admin = isAdmin();
+      var changes = rows.filter(function (x) { return x.needs_update; }).length;
+      var tools = '<input type="text" class="search" id="q" placeholder="بحث بالصنف أو المورد">' +
+        '<label class="check"><span class="switch"><input type="checkbox" id="only"' + (pricingOnlyChanges ? ' checked' : '') + '><i></i></span>اللي سعره محتاج تحديث بس</label>' +
+        (admin && changes ? '<button class="btn primary" id="apply-all">اعتماد كل الأسعار المقترحة (' + changes + ')</button>' : '');
+      var html = head('التسعير', 'سعر البيع = تكلفة المورد + نسبة ربحك من التكلفة. التكلفة هي أرخص سعر معتمد وساري من الموردين.', '');
+
+      var cats = (r.category_rules || []).map(function (c) {
+        return '<div class="panel-head" style="border-top:1px solid var(--line);padding-top:10px"><span>' + esc(c.category) + '</span><span class="toolbar"><b class="num">' + Number(c.markup_pct) + '%</b>' +
+          (admin ? '<button class="btn sm danger" data-del-rule="' + c.id + '">حذف</button>' : '') + '</span></div>';
+      }).join('');
+      var catOptions = (r.categories || []).map(function (c) { return '<option>' + esc(c) + '</option>'; }).join('');
+      html += '<div class="grid2"><section class="panel"><div class="panel-head"><h2>نسبة الربح</h2><span class="label">من سعر الشراء</span></div>' +
+        '<div class="panel-head"><label class="field" for="def" style="flex:1"><b style="font-weight:600">النسبة العامة لكل الأصناف</b><small>مثال: 8 يعني الكيس اللي بـ 100 يتباع بـ 108</small></label>' +
+        '<span class="toolbar"><input type="number" id="def" step="0.5" min="0" value="' + (r.default_rule == null ? '' : Number(r.default_rule)) + '" placeholder="مش متحددة" dir="ltr" style="max-width:110px"' + (admin ? '' : ' disabled') + '><span>%</span>' + (admin ? '<button class="btn sm primary" id="def-save">حفظ</button>' : '') + '</span></div>' +
+        '<div class="label" style="margin-top:6px">نسبة مختلفة لمجموعة أصناف (تغلب على النسبة العامة)</div>' + (cats || '<p class="label">ما فيش.</p>') +
+        (admin ? '<div class="toolbar"><select id="cat" style="max-width:200px">' + catOptions + '</select><input type="number" id="cat-pct" step="0.5" min="0" placeholder="%" dir="ltr" style="max-width:90px"><button class="btn sm" id="cat-add">إضافة</button></div>' : '') +
+        '</section>' +
+        '<section class="panel"><div class="panel-head"><h2>قواعد الحساب</h2></div>' +
+        '<div class="panel-head"><label class="field" for="minp" style="flex:1"><b style="font-weight:600">أقل نسبة ربح مقبولة</b><small>لو سعر البيع الحالي ربحه أقل منها يتعلّم بالأحمر</small></label><span class="toolbar"><input type="number" id="minp" step="0.5" min="0" value="' + esc(s.pricing_min_markup_pct) + '" dir="ltr" style="max-width:90px"' + (admin ? '' : ' disabled') + '><span>%</span>' + (admin ? '<button class="btn sm" data-set="pricing_min_markup_pct">حفظ</button>' : '') + '</span></div>' +
+        '<div class="panel-head"><label class="field" for="rnd" style="flex:1"><b style="font-weight:600">التقريب لفوق لأقرب</b><small>عشان سعر البيع يطلع رقم سهل</small></label><span class="toolbar"><select id="rnd"' + (admin ? '' : ' disabled') + '>' +
+          [0.25, 0.5, 1, 5, 10].map(function (v) { return '<option value="' + v + '"' + (Number(s.pricing_round_to) === v ? ' selected' : '') + '>' + v + ' ريال</option>'; }).join('') + '</select>' + (admin ? '<button class="btn sm" data-set="pricing_round_to">حفظ</button>' : '') + '</span></div>' +
+        '<div class="panel-head"><label class="field" for="vat" style="flex:1"><b style="font-weight:600">الضريبة في عرض السعر</b><small>الضريبة ' + esc(s.vat_rate_pct) + '%</small></label><span class="toolbar"><select id="vat"' + (admin ? '' : ' disabled') + '><option value="excluded"' + (s.pricing_vat_mode !== 'included' ? ' selected' : '') + '>السعر + الضريبة منفصلة</option><option value="included"' + (s.pricing_vat_mode === 'included' ? ' selected' : '') + '>السعر شامل الضريبة</option></select>' + (admin ? '<button class="btn sm" data-set="pricing_vat_mode">حفظ</button>' : '') + '</span></div>' +
+        '</section></div>';
+
+      var list = pricingOnlyChanges ? rows.filter(function (x) { return x.needs_update; }) : rows;
+      var trs = list.map(function (x, i) {
+        var scopeAr = { product: 'خاصة بالصنف', category: 'من المجموعة', 'default': 'العامة' }[x.rule_scope] || '';
+        var costCell = x.cost != null
+          ? '<b class="num">' + n2(x.cost) + '</b><div class="label">' + esc(x.supplier) + (x.suppliers > 1 ? ' · أرخص من ' + x.suppliers + ' موردين' : '') + (x.includes_shipping ? ' · شامل الشحن' : '') + '</div>'
+          : '<span class="label">ما فيش سعر مورد ساري</span>';
+        var pctCell = admin
+          ? '<span class="toolbar" style="flex-wrap:nowrap"><input type="number" step="0.5" min="0" data-pct="' + i + '" value="' + (x.markup_pct == null ? '' : Number(x.markup_pct)) + '" dir="ltr" style="max-width:76px"><button class="btn sm" data-save-pct="' + i + '">حفظ</button>' + (x.product_rule != null ? '<button class="btn sm" data-clear-pct="' + i + '" title="رجوع للنسبة العامة">×</button>' : '') + '</span><div class="label">' + scopeAr + '</div>'
+          : (x.markup_pct == null ? '—' : '<span class="num">' + Number(x.markup_pct) + '%</span><div class="label">' + scopeAr + '</div>');
+        var sellCell = x.sell != null
+          ? '<b class="num">' + n2(x.sell) + '</b><div class="label">' + (x.current_profit_pct != null ? 'ربح <span class="num ' + (x.below_min ? 'up' : '') + '">' + x.current_profit_pct + '%</span>' + (x.below_min ? ' <span class="pill bad">أقل من المسموح</span>' : '') : '') + '</div>'
+          : '<span class="label">ما فيش</span>';
+        return '<tr data-i="' + i + '"><td class="who"><b>' + esc(x.product) + '</b><span class="label">' + esc(x.category || '') + '</span></td><td>' + esc(x.pack || x.unit_ar || '') + '</td>' +
+          '<td>' + costCell + '</td><td>' + pctCell + '</td><td>' + (x.suggested != null ? '<b class="num">' + n2(x.suggested) + '</b>' : '<span class="label">—</span>') + '</td><td>' + sellCell + '</td>' +
+          '<td class="actions">' + (admin && x.needs_update ? '<button class="btn sm primary" data-apply="' + i + '">اعتمد ' + n2(x.suggested) + '</button>' : (x.suggested != null && !x.needs_update ? '<span class="pill good">مظبوط</span>' : '')) + '</td></tr>';
+      }).join('');
+      html += '<section class="panel"><div class="panel-head"><h2>أسعار البيع</h2><div class="toolbar">' + tools + '</div></div>' +
+        (trs ? '<div class="table-wrap"><table><thead><tr><th>الصنف</th><th>العبوة</th><th>التكلفة (أرخص مورد)</th><th>نسبة الربح</th><th>سعر البيع المقترح</th><th>سعر البيع الحالي</th><th></th></tr></thead><tbody>' + trs + '</tbody></table></div>'
+             : '<p class="empty">' + (pricingOnlyChanges ? 'كل الأسعار مظبوطة.' : 'لا توجد أصناف بعد.') + '</p>') + '</section>';
+      main.innerHTML = html;
+
+      filterRows(main, document.getElementById('q'));
+      document.getElementById('only').onchange = function (e) { pricingOnlyChanges = e.target.checked; go('pricing'); };
+      if (!admin) return;
+      var reload = function (x) { if (x) go('pricing'); };
+      document.getElementById('def-save').onclick = function () {
+        var v = document.getElementById('def').value; if (v === '') { toast('اكتب النسبة الأول', true); return; }
+        act('pricing_rule_save', { scope: 'default', markup_pct: Number(v) }, 'تم حفظ النسبة العامة').then(reload);
+      };
+      var addCat = document.getElementById('cat-add');
+      if (addCat) addCat.onclick = function () {
+        var v = document.getElementById('cat-pct').value; if (v === '') { toast('اكتب النسبة الأول', true); return; }
+        act('pricing_rule_save', { scope: 'category', category: document.getElementById('cat').value, markup_pct: Number(v) }, 'تم الحفظ').then(reload);
+      };
+      main.querySelectorAll('[data-del-rule]').forEach(function (b) { b.onclick = function () { act('pricing_rule_delete', { id: Number(b.dataset.delRule) }, 'تم الحذف').then(reload); }; });
+      main.querySelectorAll('[data-set]').forEach(function (b) {
+        b.onclick = function () {
+          var k = b.dataset.set, el = { pricing_min_markup_pct: 'minp', pricing_round_to: 'rnd', pricing_vat_mode: 'vat' }[k];
+          var v = document.getElementById(el).value;
+          act('setting_save', { key: k, value: k === 'pricing_vat_mode' ? v : Number(v) }, 'تم الحفظ').then(reload);
+        };
+      });
+      main.querySelectorAll('[data-save-pct]').forEach(function (b) {
+        b.onclick = function () {
+          var x = list[Number(b.dataset.savePct)], v = main.querySelector('[data-pct="' + b.dataset.savePct + '"]').value;
+          if (v === '') { toast('اكتب النسبة الأول', true); return; }
+          act('pricing_rule_save', { scope: 'product', product_id: x.product_id, markup_pct: Number(v) }, 'تم حفظ نسبة الصنف').then(reload);
+        };
+      });
+      main.querySelectorAll('[data-clear-pct]').forEach(function (b) {
+        b.onclick = function () { act('pricing_rule_delete', { product_id: list[Number(b.dataset.clearPct)].product_id }, 'رجع للنسبة العامة').then(reload); };
+      });
+      main.querySelectorAll('[data-apply]').forEach(function (b) {
+        b.onclick = function () {
+          var x = list[Number(b.dataset.apply)]; b.disabled = true;
+          act('sell_price_apply', { product_id: x.product_id, unit: x.unit, pack: x.pack, price: x.suggested }, 'تم اعتماد سعر البيع').then(function (y) { if (y) go('pricing'); else b.disabled = false; });
+        };
+      });
+      var all = document.getElementById('apply-all');
+      if (all) all.onclick = function () {
+        if (!window.confirm('اعتماد ' + changes + ' سعر بيع جديد مرة واحدة؟')) return;
+        act('sell_price_apply_all', {}, 'تم اعتماد الأسعار').then(reload);
+      };
     });
   }
 
