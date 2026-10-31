@@ -156,3 +156,15 @@ tr.off td { color: var(--muted); }
   .figs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .search { max-width: none; flex: 1; }
 }
+.modal.wide { width: min(980px, 100%); }
+.qlines { display: grid; gap: 8px; }
+.qline { display: grid; grid-template-columns: minmax(0, 2.4fr) 90px minmax(0, 1.3fr) 110px 110px 34px; gap: 8px; align-items: center; }
+.qline.head { font-size: .78rem; color: var(--muted); }
+.qline .sum { text-align: left; font-variant-numeric: tabular-nums; }
+.qtotals { display: grid; gap: 4px; justify-items: end; font-variant-numeric: tabular-nums; }
+.qtotals b { font-size: 1.15rem; }
+@media (max-width: 760px) {
+  .qline { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .qline.head { display: none; }
+  .qline > :first-child { grid-column: 1 / -1; }
+}

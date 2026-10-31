@@ -36,7 +36,9 @@
     forbidden: 'هذه العملية للمدير فقط', duplicate: 'الرقم أو الاسم مسجل من قبل', bad_phone: 'رقم الجوال غير صحيح',
     bad_value: 'قيمة غير صحيحة', stale: 'تم التعامل مع هذه الرسالة من قبل، حدّث الصفحة', not_found: 'غير موجود',
     self_lockout: 'لا يمكنك إيقاف حسابك أو إزالة صلاحية المدير عن نفسك', not_authorized: 'غير مصرح لك باعتماد الأسعار',
-    network: 'تعذر الاتصال بالخادم', server: 'حدث خطأ في الخادم'
+    network: 'تعذر الاتصال بالخادم', server: 'حدث خطأ في الخادم', no_items: 'أضف صنف واحد على الأقل',
+    no_price: 'فيه صنف مالوش سعر بالعبوة دي. اختار عبوة من القائمة أو اكتب السعر بإيدك', bad_item: 'فيه صنف أو كمية مش صحيحة', locked: 'العرض اتبعت خلاص ومينفعش يتعدّل، اعمل عرض جديد',
+    no_pdf: 'ملف PDF لسه بيتجهز، جرّب بعد دقيقة'
   };
   function errText(r) {
     var k = r && (r.error || r.reason) || 'server';
@@ -63,16 +65,19 @@
   function isAdmin() { return state.user && state.user.role === 'admin'; }
 
   // ------------------------------------------------------------ labels
-  var KIND = { supplier_checkin: 'متابعة يومية', merchant_quote_24h: 'متابعة عرض · 24 ساعة', merchant_quote_72h: 'متابعة عرض · 3 أيام', merchant_quote_168h: 'متابعة عرض · 7 أيام', manual: 'رسالة يدوية', auto_reply: 'رد تلقائي' };
+  var KIND = { supplier_checkin: 'متابعة يومية', merchant_quote_24h: 'متابعة عرض · 24 ساعة', merchant_quote_72h: 'متابعة عرض · 3 أيام', merchant_quote_168h: 'متابعة عرض · 7 أيام', manual: 'رسالة يدوية', auto_reply: 'رد تلقائي', quote_pdf: 'عرض سعر (PDF)' };
   var OUT = { pending_approval: ['بانتظار موافقتك', 'acc'], queued: ['جاهزة للإرسال', 'good'], previewed: ['معاينة على تيليجرام', ''], sending: ['جارٍ الإرسال', ''], sent: ['أُرسلت', 'good'], failed: ['فشلت', 'bad'], skipped: ['لم تُرسل', 'warn'], cancelled: ['ملغاة', ''] };
   var SKIP = { human_takeover: 'المحادثة مع موظف', contact_paused: 'جهة الاتصال موقوفة', followups_off: 'المتابعة مقفولة', demo_contact: 'رقم تجريبي' };
-  var FAIL = { needs_template: 'خارج نافذة الـ 24 ساعة ومفيش قالب معتمد لهذا النوع', no_inbox: 'رقم واتساب الخط ده مش متحدد في الإعدادات' };
+  var FAIL = { needs_template: 'خارج نافذة الـ 24 ساعة ومفيش قالب معتمد لهذا النوع', no_inbox: 'رقم واتساب الخط ده مش متحدد في الإعدادات', no_pdf: 'ملف العرض ماكانش جاهز' };
+  var QSTATUS = { draft: ['مسودة', ''], needs_review: ['بانتظار اعتمادك', 'acc'], approved: ['معتمد · جاري الإرسال', 'warn'], sent: ['اتبعت', 'good'], accepted: ['اتقبل', 'good'], rejected: ['اترفض', 'bad'], expired: ['انتهت صلاحيته', ''], cancelled: ['ملغي', ''] };
+  function whoApproved(v) { if (!v) return '—'; if (v === 'bot') return 'البوت تلقائيًا'; return String(v).replace('panel:', '').replace('telegram:', 'تيليجرام: '); }
   var TRUST = { new: ['جديد', 'warn'], trusted: ['موثوق', 'good'], blocked: ['محظور', 'bad'] };
   var MSTATUS = { lead: ['محتمل', 'warn'], active: ['نشط', 'good'], inactive: ['غير نشط', ''], blocked: ['محظور', 'bad'] };
   var ACTION = { setup: 'إنشاء المدير', login: 'تسجيل دخول', login_failed: 'محاولة دخول خاطئة', supplier_save: 'تعديل مورد', merchant_save: 'تعديل تاجر',
     takeover_start: 'إيقاف البوت ودخول موظف', takeover_end: 'إرجاع المحادثة للبوت', send_message: 'رسالة يدوية', outbox_approve: 'اعتماد رسالة',
     outbox_cancel: 'إلغاء رسالة', outbox_approve_all: 'اعتماد كل الرسائل', price_approve: 'اعتماد سعر', price_reject: 'رفض سعر',
-    setting_save: 'تغيير إعداد', outbox_retry: 'إعادة محاولة إرسال', pricing_rule_save: 'تعديل نسبة ربح', pricing_rule_delete: 'حذف نسبة ربح', sell_price_apply: 'اعتماد سعر بيع', sell_price_apply_all: 'اعتماد كل أسعار البيع', user_save: 'تعديل مستخدم', change_password: 'تغيير كلمة المرور' };
+    setting_save: 'تغيير إعداد', outbox_retry: 'إعادة محاولة إرسال', pricing_rule_save: 'تعديل نسبة ربح', pricing_rule_delete: 'حذف نسبة ربح', sell_price_apply: 'اعتماد سعر بيع', sell_price_apply_all: 'اعتماد كل أسعار البيع', user_save: 'تعديل مستخدم', change_password: 'تغيير كلمة المرور',
+    quote_save: 'حفظ عرض سعر', quote_approve: 'اعتماد عرض سعر', quote_cancel: 'إلغاء عرض سعر', quote_resend: 'إعادة إرسال عرض سعر', quote_accepted: 'العرض اتقبل', quote_rejected: 'العرض اترفض' };
   function pill(map, k) { var v = map[k] || [k, '']; return '<span class="pill ' + v[1] + '">' + esc(v[0]) + '</span>'; }
   function outPill(o) {
     var p = pill(OUT, o.status);
@@ -116,7 +121,7 @@
 
   // ------------------------------------------------------------ shell
   var VIEWS = [
-    ['home', 'الرئيسية'], ['outbox', 'الرسائل الصادرة'], ['suppliers', 'الموردون'], ['merchants', 'التجار'],
+    ['home', 'الرئيسية'], ['quotes', 'عروض الأسعار'], ['outbox', 'الرسائل الصادرة'], ['suppliers', 'الموردون'], ['merchants', 'التجار'],
     ['prices', 'اعتماد الأسعار'], ['pricing', 'التسعير'], ['settings', 'الإعدادات', true], ['users', 'المستخدمون', true], ['audit', 'سجل العمليات', true]
   ];
   function renderShell() {
@@ -133,6 +138,7 @@
     nav.innerHTML = VIEWS.filter(function (v) { return !v[2] || isAdmin(); }).map(function (v) {
       var b = '';
       if (v[0] === 'outbox' && state.counts.outbox_pending) b = '<span class="badge num">' + state.counts.outbox_pending + '</span>';
+      if (v[0] === 'quotes' && state.counts.quotes_review) b = '<span class="badge num">' + state.counts.quotes_review + '</span>';
       if (v[0] === 'prices' && state.counts.prices_pending) b = '<span class="badge num">' + state.counts.prices_pending + '</span>';
       return '<button data-view="' + v[0] + '" class="' + (state.view === v[0] ? 'on' : '') + '"><span>' + v[1] + '</span>' + b + '</button>';
     }).join('');
@@ -142,12 +148,12 @@
     state.view = view; renderNav();
     var main = document.getElementById('main');
     main.innerHTML = '<p class="muted">جارٍ التحميل…</p>';
-    ({ home: viewHome, outbox: viewOutbox, suppliers: viewSuppliers, merchants: viewMerchants, prices: viewPrices, pricing: viewPricing,
+    ({ home: viewHome, quotes: viewQuotes, outbox: viewOutbox, suppliers: viewSuppliers, merchants: viewMerchants, prices: viewPrices, pricing: viewPricing,
        settings: viewSettings, users: viewUsers, audit: viewAudit }[view] || viewHome)(main);
   }
   function refreshCounts(r) {
     if (!r || !r.counts) return;
-    state.counts = { outbox_pending: r.counts.outbox_pending, prices_pending: (r.data && r.data.kpi && r.data.kpi.pending) || 0 };
+    state.counts.outbox_pending = r.counts.outbox_pending; state.counts.prices_pending = (r.data && r.data.kpi && r.data.kpi.pending) || 0;
     renderNav();
   }
   function head(title, sub, tools) {
@@ -220,6 +226,199 @@
           };
         });
       });
+    });
+  }
+
+
+  // ------------------------------------------------------------ quotes
+  var quoteFilter = 'open';
+  function viewQuotes(main) {
+    api('quotes', { filter: quoteFilter }).then(function (r) {
+      if (!r.ok) { main.innerHTML = '<p class="empty">' + esc(errText(r)) + '</p>'; return; }
+      var items = r.items || [];
+      var review = items.filter(function (q) { return q.status === 'needs_review' || q.status === 'draft'; }).length;
+      if (quoteFilter === 'open') { state.counts.quotes_review = items.filter(function (q) { return q.status === 'needs_review'; }).length; renderNav(); }
+      var tools = '<input type="text" class="search" id="q" placeholder="بحث برقم العرض أو التاجر">' +
+        '<select id="qf" aria-label="عرض"><option value="open"' + (quoteFilter === 'open' ? ' selected' : '') + '>المفتوحة</option><option value="all"' + (quoteFilter === 'all' ? ' selected' : '') + '>كل العروض</option></select>' +
+        '<button class="btn primary" id="new-q">عرض سعر جديد</button>';
+      var rows = items.map(function (q) {
+        var m = q.merchant || {}, send = q.send ? pill(OUT, q.send.status) : '';
+        return '<tr data-id="' + q.id + '"><td><b class="num">' + esc(q.quote_no) + '</b><div class="label">' + time(q.created_at) + '</div></td>' +
+          '<td class="who"><b>' + esc(m.company || m.name || '—') + '</b><span class="label num">' + esc(m.phone || '') + '</span></td>' +
+          '<td class="num">' + (q.items || []).length + '</td><td><b class="num">' + n2(q.total) + '</b><div class="label">شامل الضريبة</div></td>' +
+          '<td>' + pill(QSTATUS, q.status) + '</td><td>' + esc(whoApproved(q.approved_by)) + '</td><td>' + send + (q.has_pdf ? ' <span class="pill">PDF</span>' : '') + '</td>' +
+          '<td class="actions"><button class="btn sm' + (q.status === 'needs_review' ? ' primary' : '') + '" data-open="' + q.id + '">' + (q.status === 'needs_review' && isAdmin() ? 'مراجعة واعتماد' : 'فتح') + '</button></td></tr>';
+      }).join('');
+      main.innerHTML = head('عروض الأسعار', 'البوت بيعمل العروض ويبعتها لوحده تحت الحد اللي محدده. اللي فوق الحد أو فيه صنف مالوش سعر بيستنى اعتمادك هنا أو على تيليجرام.', tools) +
+        (review ? '<section class="panel"><span class="pill acc">' + review + ' عرض مستني مراجعة</span></section>' : '') +
+        '<section class="panel">' + (rows ? '<div class="table-wrap"><table><thead><tr><th>العرض</th><th>التاجر</th><th>أصناف</th><th>الإجمالي</th><th>الحالة</th><th>اعتمده</th><th>الإرسال</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+          : '<p class="empty">' + (quoteFilter === 'open' ? 'مفيش عروض مفتوحة.' : 'مفيش عروض لسه.') + '</p>') + '</section>';
+      filterRows(main, document.getElementById('q'));
+      document.getElementById('qf').onchange = function (e) { quoteFilter = e.target.value; go('quotes'); };
+      document.getElementById('new-q').onclick = function () { quoteModal(null); };
+      main.querySelectorAll('[data-open]').forEach(function (b) {
+        b.onclick = function () { quoteModal(items.filter(function (q) { return q.id === Number(b.dataset.open); })[0]); };
+      });
+    });
+  }
+
+  function loadCatalog() {
+    if (state.cache.catalog && Date.now() - state.cache.catalogAt < 120000) return Promise.resolve(state.cache.catalog);
+    return api('quote_catalog').then(function (r) { if (r.ok) { state.cache.catalog = r; state.cache.catalogAt = Date.now(); } return r; });
+  }
+
+  function downloadPdf(q) {
+    act('quote_pdf', { id: q.id }).then(function (r) {
+      if (!r) return;
+      var bin = atob(r.base64), arr = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      var url = URL.createObjectURL(new Blob([arr], { type: 'application/pdf' }));
+      var a = document.createElement('a'); a.href = url; a.download = r.file_name || 'quote.pdf'; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+    });
+  }
+
+  function quoteModal(q) {
+    loadCatalog().then(function (cat) {
+      if (!cat || !cat.ok) { toast(errText(cat), true); return; }
+      var editable = !q || ['draft', 'needs_review', 'approved'].indexOf(q.status) >= 0;
+      var products = {}, order = [];
+      (cat.items || []).forEach(function (it) {
+        if (!products[it.product_id]) { products[it.product_id] = { name: it.name, packs: [] }; order.push(it.product_id); }
+        products[it.product_id].packs.push({ label: it.label, price: Number(it.price) });
+      });
+      var rate = Number(cat.vat_rate_pct || 15) / 100;
+      var lines = q ? (q.items || []).map(function (i) { return { product_id: i.product_id, qty: Number(i.qty), unit: i.unit || '', price: Number(i.unit_price), manual: false }; }) : [{ product_id: '', qty: '', unit: '', price: null, manual: false }];
+      var m = q ? (q.merchant || {}) : {};
+      var merchants = cat.merchants || [];
+
+      function productOptions(sel) {
+        return '<option value="">اختار الصنف…</option>' + order.map(function (pid) {
+          return '<option value="' + pid + '"' + (String(pid) === String(sel) ? ' selected' : '') + '>' + esc(products[pid].name) + '</option>';
+        }).join('');
+      }
+      function packPrice(l) {
+        var p = products[l.product_id]; if (!p) return null;
+        var hit = p.packs.filter(function (k) { return k.label === l.unit; })[0];
+        return hit ? hit.price : null;
+      }
+      function known(l) { return l.manual ? l.price : (packPrice(l) != null ? packPrice(l) : (l.price || null)); }
+      function sumHtml(l) {
+        var k = known(l);
+        return k != null && Number(l.qty) > 0 ? n2(Number(l.qty) * k) : (l.unit && Number(l.qty) > 0 ? '<span class="label">يتحسب عند الحفظ</span>' : '—');
+      }
+      function lineHtml(l, i) {
+        var p = products[l.product_id], list = p ? p.packs.map(function (k) { return '<option value="' + esc(k.label) + '">' + esc(k.label) + ' · ' + n2(k.price) + '</option>'; }).join('') : '';
+        var kn = known(l), sum = sumHtml(l);
+        return '<div class="qline" data-i="' + i + '">' +
+          '<select data-f="product_id" aria-label="الصنف"' + (editable ? '' : ' disabled') + '>' + productOptions(l.product_id) + '</select>' +
+          '<input type="number" data-f="qty" min="0" step="any" value="' + esc(l.qty) + '" placeholder="الكمية" aria-label="الكمية" dir="ltr"' + (editable ? '' : ' disabled') + '>' +
+          '<input type="text" data-f="unit" list="packs-' + i + '" value="' + esc(l.unit) + '" placeholder="العبوة أو طن/كيلو" aria-label="العبوة"' + (editable ? '' : ' disabled') + '><datalist id="packs-' + i + '">' + list + '<option value="طن"><option value="كيلو"></datalist>' +
+          '<input type="number" data-f="price" min="0" step="0.01" value="' + (l.manual && l.price != null ? esc(l.price) : '') + '" placeholder="' + (kn != null && !l.manual ? n2(kn) : 'سعر يدوي') + '" aria-label="سعر الوحدة" dir="ltr"' + (editable ? '' : ' disabled') + '>' +
+          '<span class="sum num">' + sum + '</span>' +
+          (editable ? '<button class="btn sm" type="button" data-del="' + i + '" aria-label="حذف السطر">×</button>' : '<span></span>') + '</div>';
+      }
+      var title = q ? 'عرض سعر ' + esc(q.quote_no) : 'عرض سعر جديد';
+      var merchantPart = q
+        ? '<div class="panel-head"><div><b>' + esc(m.company || m.name || '—') + '</b> <span class="label num">' + esc(m.phone) + '</span><div class="label">' + esc(m.city || '') + '</div></div>' + pill(QSTATUS, q.status) + '</div>'
+        : '<div class="form-row"><label class="field"><span>تاجر مسجل</span><select id="q-merchant"><option value="">تاجر جديد…</option>' + merchants.map(function (x) { return '<option value="' + x.id + '">' + esc((x.company || x.name || '') + ' · ' + x.phone) + '</option>'; }).join('') + '</select></label>' +
+          '<label class="field"><span>جوال الواتساب (لتاجر جديد)</span><input type="tel" id="q-phone" dir="ltr" placeholder="05xxxxxxxx"></label></div>' +
+          '<div class="form-row" id="q-new"><label class="field"><span>الاسم</span><input type="text" id="q-name"></label><label class="field"><span>المنشأة / المدينة</span><div class="toolbar" style="flex-wrap:nowrap"><input type="text" id="q-company" placeholder="المنشأة"><input type="text" id="q-city" placeholder="المدينة"></div></label></div>';
+      var meta = q ? '<div class="chips"><span class="chip">اعتمده: ' + esc(whoApproved(q.approved_by)) + '</span><span class="chip">صالح حتى: <span class="num">' + esc(q.valid_to ? String(q.valid_to).slice(0, 10) : '—') + '</span></span>' +
+          (q.send ? '<span class="chip">الإرسال: ' + outPill(q.send) + '</span>' : '') + '</div>' : '';
+      openModal(title, merchantPart + meta +
+        '<div class="qlines"><div class="qline head"><span>الصنف</span><span>الكمية</span><span>العبوة</span><span>سعر الوحدة</span><span>الإجمالي</span><span></span></div><div id="q-lines"></div></div>' +
+        (editable ? '<div class="toolbar"><button class="btn sm" type="button" id="q-add">+ صنف</button>' +
+          '<label class="check"><span class="switch"><input type="checkbox" id="q-vat"' + ((q ? q.prices_include_vat : cat.include_vat_default) ? ' checked' : '') + '><i></i></span>الأسعار شاملة الضريبة</label>' +
+          '<label class="check">صالح <input type="number" id="q-days" min="1" max="60" value="' + esc(cat.valid_days || 3) + '" style="max-width:70px" dir="ltr"> أيام</label></div>' : '') +
+        '<div class="qtotals" id="q-totals"></div>' +
+        '<div class="toolbar" id="q-actions"></div>',
+        function (box) {
+          box.classList.add('wide');
+          function totals() {
+            var sub = 0, unknown = false;
+            lines.forEach(function (l) {
+              var pr = l.manual ? l.price : packPrice(l); if (pr == null && !l.manual && l.price) pr = l.price;
+              if (Number(l.qty) > 0 && l.product_id) { if (pr != null) sub += Number(l.qty) * pr; else unknown = true; }
+            });
+            var incl = q && !editable ? q.prices_include_vat : (box.querySelector('#q-vat') ? box.querySelector('#q-vat').checked : false);
+            var vat = incl ? sub - sub / (1 + rate) : sub * rate, total = incl ? sub : sub + vat;
+            if (q && !editable) { sub = Number(q.subtotal); vat = Number(q.vat_amount); total = Number(q.total); unknown = false; }
+            box.querySelector('#q-totals').innerHTML = '<span>المجموع: <span class="num">' + n2(sub) + '</span></span><span>الضريبة ' + Math.round(rate * 100) + '%: <span class="num">' + n2(vat) + '</span></span><b>الإجمالي: <span class="num">' + n2(total) + '</span> ر.س</b>' + (unknown ? '<span class="label">فيه سطر هيتحسب بالتحويل عند الحفظ</span>' : '');
+          }
+          function draw() {
+            box.querySelector('#q-lines').innerHTML = lines.map(lineHtml).join('');
+            totals();
+            box.querySelectorAll('.qline[data-i]').forEach(function (row) {
+              var i = Number(row.dataset.i);
+              row.querySelectorAll('[data-f]').forEach(function (el) {
+                var f = el.dataset.f;
+                if (f === 'product_id') {
+                  el.onchange = function () { var l = lines[i], p = products[el.value]; l.product_id = el.value; l.unit = p && p.packs.length === 1 ? p.packs[0].label : ''; l.price = null; l.manual = false; draw(); };
+                  return;
+                }
+                // Typing only refreshes the numbers, so the field being typed in is never replaced.
+                el.oninput = el.onchange = function () {
+                  var l = lines[i];
+                  if (f === 'price') { l.manual = el.value !== ''; l.price = el.value === '' ? null : Number(el.value); }
+                  else if (f === 'qty') l.qty = el.value;
+                  else { l.unit = el.value.trim(); if (!l.manual) l.price = null; var ph = row.querySelector('[data-f=price]'), kk = known(l); if (!l.manual) ph.placeholder = kk != null ? n2(kk) : 'سعر يدوي'; }
+                  row.querySelector('.sum').innerHTML = sumHtml(l); totals();
+                };
+              });
+              var del = row.querySelector('[data-del]'); if (del) del.onclick = function () { lines.splice(i, 1); if (!lines.length) lines.push({ product_id: '', qty: '', unit: '', price: null, manual: false }); draw(); };
+            });
+          }
+          function payload() {
+            var d = { items: lines.filter(function (l) { return l.product_id && Number(l.qty) > 0; }).map(function (l) {
+              var x = { product_id: Number(l.product_id), qty: Number(l.qty), unit: l.unit || null }; if (l.manual && l.price != null) x.unit_price = l.price; return x; }) };
+            if (q) { d.id = q.id; d.merchant_id = m.id; }
+            else {
+              var mid = box.querySelector('#q-merchant').value;
+              if (mid) d.merchant_id = Number(mid);
+              else { d.phone = box.querySelector('#q-phone').value; d.name = box.querySelector('#q-name').value; d.company = box.querySelector('#q-company').value; d.city = box.querySelector('#q-city').value; }
+            }
+            var vatBox = box.querySelector('#q-vat'); if (vatBox) d.prices_include_vat = vatBox.checked;
+            var days = box.querySelector('#q-days'); if (days && days.value) d.valid_days = Number(days.value);
+            return d;
+          }
+          function save(thenApprove) {
+            var d = payload(); if (!d.items.length) { toast(ERR.no_items, true); return; }
+            act('quote_save', d, thenApprove ? null : 'اتحفظ العرض').then(function (r) {
+              if (!r) return;
+              q = r.quote; lines = (q.items || []).map(function (i) { return { product_id: i.product_id, qty: Number(i.qty), unit: i.unit || '', price: Number(i.unit_price), manual: false }; });
+              if (thenApprove) {
+                act('quote_approve', { id: q.id }, 'اتعمد العرض، والـ PDF هيتبعت للتاجر خلال دقيقة').then(function (x) { if (x) closeModal(); });
+              } else { closeModal(); }
+            });
+          }
+          function actions() {
+            var a = box.querySelector('#q-actions'), html = '';
+            if (editable) {
+              html += '<button class="btn" type="button" id="qa-save">حفظ' + (q && q.status === 'approved' ? ' (يرجع مسودة)' : ' كمسودة') + '</button>';
+              if (isAdmin()) html += '<button class="btn primary" type="button" id="qa-approve">حفظ واعتماد وإرسال</button>';
+            }
+            if (q && q.has_pdf) html += '<button class="btn" type="button" id="qa-pdf">تنزيل PDF</button>';
+            if (q && isAdmin() && (q.status === 'sent' || (q.status === 'approved' && q.send && q.send.status === 'failed'))) html += '<button class="btn" type="button" id="qa-resend">إعادة إرسال للتاجر</button>';
+            if (q && isAdmin() && q.status === 'sent') html += '<button class="btn good" type="button" id="qa-acc">التاجر وافق</button><button class="btn" type="button" id="qa-rej">التاجر رفض</button>';
+            if (q && isAdmin() && ['cancelled', 'accepted', 'rejected', 'expired'].indexOf(q.status) < 0) html += '<button class="btn danger" type="button" id="qa-cancel">إلغاء العرض</button>';
+            a.innerHTML = html;
+            var on = function (id, f) { var b = a.querySelector('#' + id); if (b) b.onclick = f; };
+            on('qa-save', function () { save(false); });
+            on('qa-approve', function () { save(true); });
+            on('qa-pdf', function () { downloadPdf(q); });
+            on('qa-resend', function () { act('quote_resend', { id: q.id }, 'رجع لطابور الإرسال').then(function (x) { if (x) closeModal(); }); });
+            on('qa-acc', function () { act('quote_status', { id: q.id, status: 'accepted' }, 'اتسجل إن التاجر وافق، والمتابعة وقفت').then(function (x) { if (x) closeModal(); }); });
+            on('qa-rej', function () { act('quote_status', { id: q.id, status: 'rejected' }, 'اتسجل إن التاجر رفض، والمتابعة وقفت').then(function (x) { if (x) closeModal(); }); });
+            on('qa-cancel', function () { if (!window.confirm('إلغاء العرض ' + q.quote_no + '؟ لو لسه ماتبعتش مش هيتبعت، والمتابعة هتقف.')) return; act('quote_cancel', { id: q.id }, 'اتلغى العرض').then(function (x) { if (x) closeModal(); }); });
+          }
+          var addBtn = box.querySelector('#q-add'); if (addBtn) addBtn.onclick = function () { lines.push({ product_id: '', qty: '', unit: '', price: null, manual: false }); draw(); };
+          var vatBox = box.querySelector('#q-vat'); if (vatBox) vatBox.onchange = draw;
+          var sel = box.querySelector('#q-merchant');
+          if (sel) sel.onchange = function () { box.querySelector('#q-new').style.display = sel.value ? 'none' : ''; box.querySelector('#q-phone').disabled = !!sel.value; };
+          draw(); actions();
+        });
+      state.afterClose = function () { go('quotes'); };
     });
   }
 
@@ -573,15 +772,35 @@
     return '<div class="panel-head" style="border-bottom:1px solid var(--line);padding-bottom:12px"><label class="field" for="s-' + x[0] + '" style="flex:1;min-width:220px"><b style="font-weight:600">' + x[2] + '</b><small>' + x[3] + '</small></label><span class="toolbar">' + input + '<button class="btn sm" data-k="' + x[0] + '" data-t="' + x[1] + '">حفظ</button></span></div>';
   }
   function confirmWhatsApp() { return window.confirm('من دلوقتي الرسائل المعتمدة هتتبعت فعلًا على واتساب للموردين والتجار. متأكد؟'); }
+  function quoteSettingsHtml(s) {
+    return '<section class="panel"><div class="panel-head"><h2>عروض الأسعار</h2><span class="label">بيستخدمها البوت واللوحة وملف الـ PDF</span></div><div class="form">' +
+      '<div class="panel-head" style="border-bottom:1px solid var(--line);padding-bottom:12px"><label class="field" style="flex:1;min-width:220px"><b style="font-weight:600">البوت يبعت العروض لوحده</b><small>لو قفلتها، كل عرض يستنى اعتمادك</small></label><span class="switch"><input type="checkbox" id="qs-quote_auto_send"' + (s.quote_auto_send === true ? ' checked' : '') + '><i></i></span></div>' +
+      '<div class="panel-head" style="border-bottom:1px solid var(--line);padding-bottom:12px"><label class="field" for="qs-quote_auto_max_total" style="flex:1;min-width:220px"><b style="font-weight:600">أكبر إجمالي يتبعت من غير اعتماد (ريال، شامل الضريبة)</b><small>العروض الأكبر بتوصلك على تيليجرام بزرار اعتماد</small></label><input type="number" id="qs-quote_auto_max_total" min="0" step="500" value="' + esc(s.quote_auto_max_total) + '" dir="ltr" style="max-width:160px"></div>' +
+      '<div class="panel-head" style="border-bottom:1px solid var(--line);padding-bottom:12px"><label class="field" for="qs-quote_valid_days" style="flex:1;min-width:220px"><b style="font-weight:600">صلاحية العرض (أيام)</b><small>بعدها السعر يتحدث حسب السوق</small></label><input type="number" id="qs-quote_valid_days" min="1" max="60" step="1" value="' + esc(s.quote_valid_days) + '" dir="ltr" style="max-width:100px"></div>' +
+      '<label class="field"><span>طريقة الدفع (بتظهر في الـ PDF)</span><input type="text" id="qs-quote_payment_terms" maxlength="200" value="' + esc(s.quote_payment_terms) + '"></label>' +
+      '<label class="field"><span>ملاحظة التوصيل (بتظهر في الـ PDF)</span><input type="text" id="qs-quote_delivery_note" maxlength="200" value="' + esc(s.quote_delivery_note) + '"></label>' +
+      '<label class="field"><span>رسالة واتساب مع الـ PDF</span><textarea id="qs-quote_message" rows="4" maxlength="1000">' + esc(s.quote_message) + '</textarea><small>{name} اسم التاجر · {no} رقم العرض (لازم) · {total} الإجمالي · {valid} آخر يوم صلاحية</small></label>' +
+      '<div class="toolbar"><button class="btn primary" id="qs-save">حفظ إعدادات العروض</button></div></div></section>';
+  }
   function viewSettings(main) {
-    api('settings').then(function (r) {
+    Promise.all([api('settings'), api('quote_settings')]).then(function (res) {
+      var r = res[0], qs = (res[1] && res[1].ok && res[1].items) || {};
       if (!r.ok) { main.innerHTML = '<p class="empty">' + esc(errText(r)) + '</p>'; return; }
       var s = r.items || {};
       var html = head('الإعدادات', 'كل تغيير يتسجل في سجل العمليات باسمك.');
       html += '<section class="panel"><div class="chips"><span class="chip">نموذج قراءة الرسائل: <span class="num">' + esc(s.extraction_model) + '</span></span><span class="chip">وضع الإرسال: ' + (s.outbox_mode === 'whatsapp' ? 'واتساب' : 'معاينة على تيليجرام') + '</span><span class="chip">الملخص الصباحي: <span class="num">' + esc(s.morning_digest_time) + '</span></span></div></section>';
       html += '<section class="panel"><div class="panel-head"><h2>واتساب (رمّانة)</h2><span class="label">حساب رمّانة رقم <span class="num">' + esc(s.romanh_account_id) + '</span></span></div><div class="form">' + WA_SETTINGS.map(function (x) { return settingRow(x, s); }).join('') + '</div></section>';
+      html += quoteSettingsHtml(qs);
       html += '<section class="panel"><div class="panel-head"><h2>الأسعار والمتابعة</h2></div><div class="form">' + SETTINGS.map(function (x) { return settingRow(x, s); }).join('') + '</div></section>';
       main.innerHTML = html;
+      document.getElementById('qs-save').onclick = function () {
+        var g = function (k) { return document.getElementById('qs-' + k); };
+        act('quote_settings_save', {
+          quote_auto_send: g('quote_auto_send').checked, quote_auto_max_total: Number(g('quote_auto_max_total').value),
+          quote_valid_days: Number(g('quote_valid_days').value), quote_payment_terms: g('quote_payment_terms').value.trim(),
+          quote_delivery_note: g('quote_delivery_note').value.trim(), quote_message: g('quote_message').value.trim()
+        }, 'اتحفظت إعدادات العروض');
+      };
       main.querySelectorAll('[data-k]').forEach(function (b) {
         b.onclick = function () {
           var el = document.getElementById('s-' + b.dataset.k), t = b.dataset.t, v;
@@ -657,7 +876,7 @@
   }
   setInterval(function () {
     if (!state.user || modalRoot.innerHTML) return;
-    if (state.view === 'home' || state.view === 'outbox' || state.view === 'prices') {
+    if (state.view === 'home' || state.view === 'outbox' || state.view === 'prices' || state.view === 'quotes') {
       var active = document.activeElement;
       if (active && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT')) return;
       go(state.view);
