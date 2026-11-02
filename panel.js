@@ -38,7 +38,8 @@
     self_lockout: 'لا يمكنك إيقاف حسابك أو إزالة صلاحية المدير عن نفسك', not_authorized: 'غير مصرح لك باعتماد الأسعار',
     network: 'تعذر الاتصال بالخادم', server: 'حدث خطأ في الخادم', no_items: 'أضف صنف واحد على الأقل',
     no_price: 'فيه صنف مالوش سعر بالعبوة دي. اختار عبوة من القائمة أو اكتب السعر بإيدك', bad_item: 'فيه صنف أو كمية مش صحيحة', locked: 'العرض اتبعت خلاص ومينفعش يتعدّل، اعمل عرض جديد',
-    no_pdf: 'ملف PDF لسه بيتجهز، جرّب بعد دقيقة'
+    no_pdf: 'ملف PDF لسه بيتجهز، جرّب بعد دقيقة',
+    bad_file_type: 'النوع ده مش مدعوم. الصور JPG أو PNG، والفيديو MP4 بس', file_too_big: 'الملف كبير: الصورة لحد 5 ميجا والفيديو لحد 15 ميجا', empty_file: 'الملف فاضي أو ما وصلش، جرّب تاني'
   };
   function errText(r) {
     var k = r && (r.error || r.reason) || 'server';
@@ -65,10 +66,10 @@
   function isAdmin() { return state.user && state.user.role === 'admin'; }
 
   // ------------------------------------------------------------ labels
-  var KIND = { supplier_checkin: 'متابعة يومية', merchant_quote_24h: 'متابعة عرض · 24 ساعة', merchant_quote_72h: 'متابعة عرض · 3 أيام', merchant_quote_168h: 'متابعة عرض · 7 أيام', manual: 'رسالة يدوية', auto_reply: 'رد تلقائي', quote_pdf: 'عرض سعر (PDF)', supplier_po_sent: 'أمر شراء للمورد', supplier_po_remind: 'تذكير المورد بالتأكيد', supplier_po_ready: 'سؤال المورد عن الجاهزية', po_delay: 'إبلاغ العميل بالتأخير', po_arrival: 'إبلاغ العميل بالوصول', po_delivery_check: 'سؤال العميل بعد التسليم' };
+  var KIND = { supplier_checkin: 'متابعة يومية', merchant_quote_24h: 'متابعة عرض · 24 ساعة', merchant_quote_72h: 'متابعة عرض · 3 أيام', merchant_quote_168h: 'متابعة عرض · 7 أيام', manual: 'رسالة يدوية', auto_reply: 'رد تلقائي', quote_pdf: 'عرض سعر (PDF)', supplier_po_sent: 'أمر شراء للمورد', supplier_po_remind: 'تذكير المورد بالتأكيد', supplier_po_ready: 'سؤال المورد عن الجاهزية', po_delay: 'إبلاغ العميل بالتأخير', po_arrival: 'إبلاغ العميل بالوصول', po_delivery_check: 'سؤال العميل بعد التسليم', product_media: 'صورة/فيديو منتج' };
   var OUT = { pending_approval: ['بانتظار موافقتك', 'acc'], queued: ['جاهزة للإرسال', 'good'], previewed: ['معاينة على تيليجرام', ''], sending: ['جارٍ الإرسال', ''], sent: ['أُرسلت', 'good'], failed: ['فشلت', 'bad'], skipped: ['لم تُرسل', 'warn'], cancelled: ['ملغاة', ''] };
   var SKIP = { human_takeover: 'المحادثة مع موظف', contact_paused: 'جهة الاتصال موقوفة', followups_off: 'المتابعة مقفولة', demo_contact: 'رقم تجريبي' };
-  var FAIL = { needs_template: 'خارج نافذة الـ 24 ساعة ومفيش قالب معتمد لهذا النوع', no_inbox: 'رقم واتساب الخط ده مش متحدد في الإعدادات', no_pdf: 'ملف العرض ماكانش جاهز' };
+  var FAIL = { needs_template: 'خارج نافذة الـ 24 ساعة ومفيش قالب معتمد لهذا النوع', no_inbox: 'رقم واتساب الخط ده مش متحدد في الإعدادات', no_pdf: 'ملف العرض ماكانش جاهز', no_media: 'الصورة أو الفيديو اتمسح أو اتوقف' };
   var POSTATUS = { sent: ['اتبعت للمورد · مستني تأكيد', 'acc'], confirmed: ['المورد أكد', 'good'], ready: ['جاهز للشحن', 'good'], shipped: ['اتشحن', 'warn'], arrived: ['وصل', 'good'], delivered: ['اتسلم', 'good'], cancelled: ['ملغي', ''] };
   var POLATE = { confirm: 'المورد متأخر في التأكيد', ship: 'متأخر عن موعد الشحن', arrival: 'متأخر عن موعد الوصول' };
   var QSTATUS = { draft: ['مسودة', ''], needs_review: ['بانتظار اعتمادك', 'acc'], approved: ['معتمد · جاري الإرسال', 'warn'], sent: ['اتبعت', 'good'], accepted: ['اتقبل', 'good'], rejected: ['اترفض', 'bad'], expired: ['انتهت صلاحيته', ''], cancelled: ['ملغي', ''] };
@@ -79,7 +80,7 @@
     takeover_start: 'إيقاف البوت ودخول موظف', takeover_end: 'إرجاع المحادثة للبوت', send_message: 'رسالة يدوية', outbox_approve: 'اعتماد رسالة',
     outbox_cancel: 'إلغاء رسالة', outbox_approve_all: 'اعتماد كل الرسائل', price_approve: 'اعتماد سعر', price_reject: 'رفض سعر',
     setting_save: 'تغيير إعداد', outbox_retry: 'إعادة محاولة إرسال', pricing_rule_save: 'تعديل نسبة ربح', pricing_rule_delete: 'حذف نسبة ربح', sell_price_apply: 'اعتماد سعر بيع', sell_price_apply_all: 'اعتماد كل أسعار البيع', user_save: 'تعديل مستخدم', change_password: 'تغيير كلمة المرور',
-    quote_save: 'حفظ عرض سعر', quote_approve: 'اعتماد عرض سعر', quote_cancel: 'إلغاء عرض سعر', quote_resend: 'إعادة إرسال عرض سعر', quote_accepted: 'العرض اتقبل', quote_rejected: 'العرض اترفض', po_save: 'حفظ أمر شراء', po_confirm: 'المورد أكد أمر الشراء', po_ready: 'أمر الشراء جاهز', po_shipped: 'أمر الشراء اتشحن', po_arrived: 'أمر الشراء وصل', po_delivered: 'أمر الشراء اتسلم', po_cancel: 'إلغاء أمر شراء', po_notify_delay: 'إبلاغ عميل بالتأخير', po_snooze: 'تأجيل تنبيه أمر شراء', lesson_add: 'إضافة درس للبوت', lesson_approve: 'اعتماد درس للبوت', lesson_reject: 'رفض درس للبوت' };
+    quote_save: 'حفظ عرض سعر', quote_approve: 'اعتماد عرض سعر', quote_cancel: 'إلغاء عرض سعر', quote_resend: 'إعادة إرسال عرض سعر', quote_accepted: 'العرض اتقبل', quote_rejected: 'العرض اترفض', po_save: 'حفظ أمر شراء', po_confirm: 'المورد أكد أمر الشراء', po_ready: 'أمر الشراء جاهز', po_shipped: 'أمر الشراء اتشحن', po_arrived: 'أمر الشراء وصل', po_delivered: 'أمر الشراء اتسلم', po_cancel: 'إلغاء أمر شراء', po_notify_delay: 'إبلاغ عميل بالتأخير', po_snooze: 'تأجيل تنبيه أمر شراء', lesson_add: 'إضافة درس للبوت', lesson_approve: 'اعتماد درس للبوت', lesson_reject: 'رفض درس للبوت', media_upload: 'رفع صورة/فيديو منتج', media_save: 'تعديل صورة/فيديو منتج', media_delete: 'حذف صورة/فيديو منتج' };
   function pill(map, k) { var v = map[k] || [k, '']; return '<span class="pill ' + v[1] + '">' + esc(v[0]) + '</span>'; }
   function outPill(o) {
     var p = pill(OUT, o.status);
@@ -123,7 +124,7 @@
 
   // ------------------------------------------------------------ shell
   var VIEWS = [
-    ['home', 'الرئيسية'], ['quotes', 'عروض الأسعار'], ['orders', 'أوامر الشراء'], ['learning', 'تعلّم البوت'], ['outbox', 'الرسائل الصادرة'], ['suppliers', 'الموردون'], ['merchants', 'التجار'],
+    ['home', 'الرئيسية'], ['quotes', 'عروض الأسعار'], ['orders', 'أوامر الشراء'], ['learning', 'تعلّم البوت'], ['media', 'صور المنتجات'], ['outbox', 'الرسائل الصادرة'], ['suppliers', 'الموردون'], ['merchants', 'التجار'],
     ['prices', 'اعتماد الأسعار'], ['pricing', 'التسعير'], ['settings', 'الإعدادات', true], ['users', 'المستخدمون', true], ['audit', 'سجل العمليات', true]
   ];
   function renderShell() {
@@ -152,7 +153,7 @@
     state.view = view; renderNav();
     var main = document.getElementById('main');
     main.innerHTML = '<p class="muted">جارٍ التحميل…</p>';
-    ({ home: viewHome, quotes: viewQuotes, orders: viewOrders, learning: viewLearning, outbox: viewOutbox, suppliers: viewSuppliers, merchants: viewMerchants, prices: viewPrices, pricing: viewPricing,
+    ({ home: viewHome, quotes: viewQuotes, orders: viewOrders, learning: viewLearning, media: viewMedia, outbox: viewOutbox, suppliers: viewSuppliers, merchants: viewMerchants, prices: viewPrices, pricing: viewPricing,
        settings: viewSettings, users: viewUsers, audit: viewAudit }[view] || viewHome)(main);
   }
   function refreshCounts(r) {
@@ -596,6 +597,112 @@
             b.disabled = true;
             act('lesson_decide', { id: Number(box.dataset.id), do: b.dataset.a, text: ta ? ta.value : null }, b.dataset.a === 'approve' ? 'اتعتمد الدرس' : 'اتوقف الدرس')
               .then(function (x) { if (x) go('learning'); else b.disabled = false; });
+          };
+        });
+      });
+    });
+  }
+
+  // ------------------------------------------------------------ product photos & videos
+  var MEDIA_MAX = { image: 5, video: 15 };
+  function makeThumb(file) {
+    return new Promise(function (resolve) {
+      var done = false, url = URL.createObjectURL(file);
+      function finish(v) { if (done) return; done = true; URL.revokeObjectURL(url); resolve(v); }
+      function draw(src, w, h) {
+        try {
+          var s = Math.min(1, 320 / Math.max(w, h)), c = document.createElement('canvas');
+          c.width = Math.max(1, Math.round(w * s)); c.height = Math.max(1, Math.round(h * s));
+          c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+          finish(c.toDataURL('image/jpeg', 0.72));
+        } catch (e) { finish(null); }
+      }
+      setTimeout(function () { finish(null); }, 8000);
+      if (file.type.indexOf('image/') === 0) {
+        var img = new Image(); img.onload = function () { draw(img, img.naturalWidth, img.naturalHeight); }; img.onerror = function () { finish(null); }; img.src = url;
+      } else {
+        var v = document.createElement('video'); v.muted = true; v.playsInline = true; v.preload = 'auto';
+        v.onloadeddata = function () { try { v.currentTime = Math.min(1, (v.duration || 2) / 2); } catch (e) { draw(v, v.videoWidth, v.videoHeight); } };
+        v.onseeked = function () { draw(v, v.videoWidth, v.videoHeight); };
+        v.onerror = function () { finish(null); }; v.src = url;
+      }
+    });
+  }
+  function mb(n) { return (n / 1048576).toFixed(n < 1048576 ? 2 : 1) + ' ميجا'; }
+  function viewMedia(main) {
+    api('media').then(function (r) {
+      if (!r.ok) { main.innerHTML = '<p class="empty">' + esc(errText(r)) + '</p>'; return; }
+      var items = r.items || [], products = r.products || [];
+      var opts = function (sel) {
+        return '<option value="">عام (مش مربوط بصنف)</option>' + products.map(function (p) { return '<option value="' + p.id + '"' + (String(sel) === String(p.id) ? ' selected' : '') + '>' + esc(p.name) + '</option>'; }).join('');
+      };
+      var tiles = items.map(function (m) {
+        return '<div class="media-tile' + (m.active ? '' : ' off') + '" data-id="' + m.id + '">' +
+          '<div class="media-thumb">' + (m.thumb ? '<img src="' + esc(m.thumb) + '" alt="">' : '<span class="label">' + (m.kind === 'video' ? 'فيديو' : 'صورة') + '</span>') +
+          (m.kind === 'video' ? '<span class="media-badge">فيديو</span>' : '') + '</div>' +
+          '<div class="media-body"><b>' + esc(m.title) + '</b><span class="label">' + esc(m.product || 'عام') + ' · ' + mb(m.size) + '</span>' +
+          '<span class="label">اتبعت ' + m.sent + ' مرة · ' + (m.active ? '<span class="pill good">البوت بيستخدمها</span>' : '<span class="pill">موقوفة</span>') + '</span></div>' +
+          '<div class="msg-actions"><button class="btn sm" data-a="edit">تعديل</button><button class="btn sm" data-a="toggle">' + (m.active ? 'إيقاف' : 'تشغيل') + '</button><button class="btn sm danger" data-a="del">حذف</button></div></div>';
+      }).join('');
+      main.innerHTML = head('صور وفيديوهات المنتجات', 'لما العميل يطلب يشوف صنف، سارة بتبعتله الصورة أو الفيديو المناسب من هنا. لو مفيش ملف للصنف، بتقوله إن الفريق هيبعته وبتنبهكم على تيليجرام.') +
+        '<section class="panel"><h2>رفع ملف جديد</h2>' +
+        '<div class="form media-form"><label class="field"><span>الملف</span><input type="file" id="md-file" accept="image/jpeg,image/png,video/mp4"><small>صورة JPG أو PNG لحد 5 ميجا، أو فيديو MP4 لحد 15 ميجا</small></label>' +
+        '<label class="field"><span>الصنف</span><select id="md-product">' + opts('') + '</select></label>' +
+        '<label class="field"><span>الوصف</span><input type="text" id="md-title" maxlength="120" placeholder="مثلًا: كيس أرز سلام 25 كيلو من قريب"><small>الوصف بيتبعت مع الصورة للعميل، وسارة بتختار على أساسه</small></label>' +
+        '<div class="toolbar"><button class="btn primary" id="md-up">رفع</button><span class="label" id="md-status"></span></div></div></section>' +
+        '<section class="panel"><h2>الملفات (' + items.length + ')</h2>' + (tiles ? '<div class="media-grid">' + tiles + '</div>' : '<p class="empty">لسه مفيش صور أو فيديوهات.</p>') + '</section>';
+
+      var fileIn = document.getElementById('md-file'), titleIn = document.getElementById('md-title');
+      fileIn.onchange = function () {
+        var f = fileIn.files[0];
+        if (f && !titleIn.value.trim()) titleIn.value = f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').slice(0, 120);
+      };
+      document.getElementById('md-up').onclick = function () {
+        var f = fileIn.files[0], btn = this, st = document.getElementById('md-status');
+        if (!f) { toast('اختار ملف الأول', true); return; }
+        var kind = /^image\/(jpeg|png)$/.test(f.type) ? 'image' : (f.type === 'video/mp4' ? 'video' : null);
+        if (!kind) { toast('النوع ده مش مدعوم. الصور JPG أو PNG، والفيديو MP4 بس', true); return; }
+        if (f.size > MEDIA_MAX[kind] * 1048576) { toast('الملف أكبر من ' + MEDIA_MAX[kind] + ' ميجا، صغّره وجرّب تاني', true); return; }
+        if (!titleIn.value.trim()) { toast('اكتب وصف للملف', true); return; }
+        btn.disabled = true; st.textContent = 'بيجهز الصورة المصغرة…';
+        makeThumb(f).then(function (thumb) {
+          st.textContent = 'جاري الرفع (' + mb(f.size) + ')…';
+          var fd = new FormData();
+          fd.append('token', state.token); fd.append('title', titleIn.value.trim()); fd.append('product_id', document.getElementById('md-product').value);
+          if (thumb) fd.append('thumb', thumb);
+          fd.append('file', f, f.name);
+          return fetch(API + '-media', { method: 'POST', body: fd, cache: 'no-store' }).then(function (x) { return x.json(); }).catch(function () { return { ok: false, error: 'network' }; });
+        }).then(function (x) {
+          btn.disabled = false; st.textContent = '';
+          if (x && x.error === 'auth') { signOut(true); return; }
+          if (!x || !x.ok) { toast(errText(x), true); return; }
+          toast('اترفع الملف، وسارة تقدر تبعته من دلوقتي'); go('media');
+        });
+      };
+      main.querySelectorAll('.media-tile').forEach(function (t) {
+        var m = items.filter(function (i) { return String(i.id) === t.dataset.id; })[0];
+        t.querySelectorAll('[data-a]').forEach(function (b) {
+          b.onclick = function () {
+            if (b.dataset.a === 'toggle') {
+              act('media_save', { id: m.id, active: !m.active }, m.active ? 'اتوقف الملف' : 'اتشغل الملف').then(function (x) { if (x) go('media'); });
+            } else if (b.dataset.a === 'del') {
+              openModal('حذف الملف', '<p>هيتمسح «' + esc(m.title) + '» نهائيًا، وأي إرسال مستني ليه هيتلغي.</p><div class="toolbar"><button class="btn danger" id="md-del">حذف</button><button class="btn" id="md-cancel">رجوع</button></div>', function () {
+                document.getElementById('md-cancel').onclick = closeModal;
+                document.getElementById('md-del').onclick = function () {
+                  this.disabled = true;
+                  act('media_delete', { id: m.id }, 'اتمسح الملف').then(function (x) { closeModal(); if (x) go('media'); });
+                };
+              });
+            } else {
+              openModal('تعديل الملف', '<form class="form" id="f"><label class="field"><span>الصنف</span><select name="product_id">' + opts(m.product_id) + '</select></label>' +
+                '<label class="field"><span>الوصف</span><input type="text" name="title" maxlength="120" required value="' + esc(m.title) + '"></label>' +
+                '<div class="toolbar"><button class="btn primary">حفظ</button></div></form>', function () {
+                document.getElementById('f').onsubmit = function (e) {
+                  e.preventDefault();
+                  act('media_save', { id: m.id, title: e.target.title.value, product_id: e.target.product_id.value }, 'اتحفظ').then(function (x) { if (x) { closeModal(); go('media'); } });
+                };
+              });
+            }
           };
         });
       });
