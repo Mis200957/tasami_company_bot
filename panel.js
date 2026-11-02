@@ -65,10 +65,12 @@
   function isAdmin() { return state.user && state.user.role === 'admin'; }
 
   // ------------------------------------------------------------ labels
-  var KIND = { supplier_checkin: 'متابعة يومية', merchant_quote_24h: 'متابعة عرض · 24 ساعة', merchant_quote_72h: 'متابعة عرض · 3 أيام', merchant_quote_168h: 'متابعة عرض · 7 أيام', manual: 'رسالة يدوية', auto_reply: 'رد تلقائي', quote_pdf: 'عرض سعر (PDF)' };
+  var KIND = { supplier_checkin: 'متابعة يومية', merchant_quote_24h: 'متابعة عرض · 24 ساعة', merchant_quote_72h: 'متابعة عرض · 3 أيام', merchant_quote_168h: 'متابعة عرض · 7 أيام', manual: 'رسالة يدوية', auto_reply: 'رد تلقائي', quote_pdf: 'عرض سعر (PDF)', supplier_po_sent: 'أمر شراء للمورد', supplier_po_remind: 'تذكير المورد بالتأكيد', supplier_po_ready: 'سؤال المورد عن الجاهزية', po_delay: 'إبلاغ العميل بالتأخير', po_arrival: 'إبلاغ العميل بالوصول', po_delivery_check: 'سؤال العميل بعد التسليم' };
   var OUT = { pending_approval: ['بانتظار موافقتك', 'acc'], queued: ['جاهزة للإرسال', 'good'], previewed: ['معاينة على تيليجرام', ''], sending: ['جارٍ الإرسال', ''], sent: ['أُرسلت', 'good'], failed: ['فشلت', 'bad'], skipped: ['لم تُرسل', 'warn'], cancelled: ['ملغاة', ''] };
   var SKIP = { human_takeover: 'المحادثة مع موظف', contact_paused: 'جهة الاتصال موقوفة', followups_off: 'المتابعة مقفولة', demo_contact: 'رقم تجريبي' };
   var FAIL = { needs_template: 'خارج نافذة الـ 24 ساعة ومفيش قالب معتمد لهذا النوع', no_inbox: 'رقم واتساب الخط ده مش متحدد في الإعدادات', no_pdf: 'ملف العرض ماكانش جاهز' };
+  var POSTATUS = { sent: ['اتبعت للمورد · مستني تأكيد', 'acc'], confirmed: ['المورد أكد', 'good'], ready: ['جاهز للشحن', 'good'], shipped: ['اتشحن', 'warn'], arrived: ['وصل', 'good'], delivered: ['اتسلم', 'good'], cancelled: ['ملغي', ''] };
+  var POLATE = { confirm: 'المورد متأخر في التأكيد', ship: 'متأخر عن موعد الشحن', arrival: 'متأخر عن موعد الوصول' };
   var QSTATUS = { draft: ['مسودة', ''], needs_review: ['بانتظار اعتمادك', 'acc'], approved: ['معتمد · جاري الإرسال', 'warn'], sent: ['اتبعت', 'good'], accepted: ['اتقبل', 'good'], rejected: ['اترفض', 'bad'], expired: ['انتهت صلاحيته', ''], cancelled: ['ملغي', ''] };
   function whoApproved(v) { if (!v) return '—'; if (v === 'bot') return 'البوت تلقائيًا'; return String(v).replace('panel:', '').replace('telegram:', 'تيليجرام: '); }
   var TRUST = { new: ['جديد', 'warn'], trusted: ['موثوق', 'good'], blocked: ['محظور', 'bad'] };
@@ -77,7 +79,7 @@
     takeover_start: 'إيقاف البوت ودخول موظف', takeover_end: 'إرجاع المحادثة للبوت', send_message: 'رسالة يدوية', outbox_approve: 'اعتماد رسالة',
     outbox_cancel: 'إلغاء رسالة', outbox_approve_all: 'اعتماد كل الرسائل', price_approve: 'اعتماد سعر', price_reject: 'رفض سعر',
     setting_save: 'تغيير إعداد', outbox_retry: 'إعادة محاولة إرسال', pricing_rule_save: 'تعديل نسبة ربح', pricing_rule_delete: 'حذف نسبة ربح', sell_price_apply: 'اعتماد سعر بيع', sell_price_apply_all: 'اعتماد كل أسعار البيع', user_save: 'تعديل مستخدم', change_password: 'تغيير كلمة المرور',
-    quote_save: 'حفظ عرض سعر', quote_approve: 'اعتماد عرض سعر', quote_cancel: 'إلغاء عرض سعر', quote_resend: 'إعادة إرسال عرض سعر', quote_accepted: 'العرض اتقبل', quote_rejected: 'العرض اترفض' };
+    quote_save: 'حفظ عرض سعر', quote_approve: 'اعتماد عرض سعر', quote_cancel: 'إلغاء عرض سعر', quote_resend: 'إعادة إرسال عرض سعر', quote_accepted: 'العرض اتقبل', quote_rejected: 'العرض اترفض', po_save: 'حفظ أمر شراء', po_confirm: 'المورد أكد أمر الشراء', po_ready: 'أمر الشراء جاهز', po_shipped: 'أمر الشراء اتشحن', po_arrived: 'أمر الشراء وصل', po_delivered: 'أمر الشراء اتسلم', po_cancel: 'إلغاء أمر شراء', po_notify_delay: 'إبلاغ عميل بالتأخير', po_snooze: 'تأجيل تنبيه أمر شراء', lesson_add: 'إضافة درس للبوت', lesson_approve: 'اعتماد درس للبوت', lesson_reject: 'رفض درس للبوت' };
   function pill(map, k) { var v = map[k] || [k, '']; return '<span class="pill ' + v[1] + '">' + esc(v[0]) + '</span>'; }
   function outPill(o) {
     var p = pill(OUT, o.status);
@@ -121,7 +123,7 @@
 
   // ------------------------------------------------------------ shell
   var VIEWS = [
-    ['home', 'الرئيسية'], ['quotes', 'عروض الأسعار'], ['outbox', 'الرسائل الصادرة'], ['suppliers', 'الموردون'], ['merchants', 'التجار'],
+    ['home', 'الرئيسية'], ['quotes', 'عروض الأسعار'], ['orders', 'أوامر الشراء'], ['learning', 'تعلّم البوت'], ['outbox', 'الرسائل الصادرة'], ['suppliers', 'الموردون'], ['merchants', 'التجار'],
     ['prices', 'اعتماد الأسعار'], ['pricing', 'التسعير'], ['settings', 'الإعدادات', true], ['users', 'المستخدمون', true], ['audit', 'سجل العمليات', true]
   ];
   function renderShell() {
@@ -139,6 +141,8 @@
       var b = '';
       if (v[0] === 'outbox' && state.counts.outbox_pending) b = '<span class="badge num">' + state.counts.outbox_pending + '</span>';
       if (v[0] === 'quotes' && state.counts.quotes_review) b = '<span class="badge num">' + state.counts.quotes_review + '</span>';
+      if (v[0] === 'learning' && state.counts.lessons_pending) b = '<span class="badge num">' + state.counts.lessons_pending + '</span>';
+      if (v[0] === 'orders' && state.counts.po_late) b = '<span class="badge num">' + state.counts.po_late + '</span>';
       if (v[0] === 'prices' && state.counts.prices_pending) b = '<span class="badge num">' + state.counts.prices_pending + '</span>';
       return '<button data-view="' + v[0] + '" class="' + (state.view === v[0] ? 'on' : '') + '"><span>' + v[1] + '</span>' + b + '</button>';
     }).join('');
@@ -148,7 +152,7 @@
     state.view = view; renderNav();
     var main = document.getElementById('main');
     main.innerHTML = '<p class="muted">جارٍ التحميل…</p>';
-    ({ home: viewHome, quotes: viewQuotes, outbox: viewOutbox, suppliers: viewSuppliers, merchants: viewMerchants, prices: viewPrices, pricing: viewPricing,
+    ({ home: viewHome, quotes: viewQuotes, orders: viewOrders, learning: viewLearning, outbox: viewOutbox, suppliers: viewSuppliers, merchants: viewMerchants, prices: viewPrices, pricing: viewPricing,
        settings: viewSettings, users: viewUsers, audit: viewAudit }[view] || viewHome)(main);
   }
   function refreshCounts(r) {
@@ -419,6 +423,182 @@
           draw(); actions();
         });
       state.afterClose = function () { go('quotes'); };
+    });
+  }
+
+  // ------------------------------------------------------------ purchase orders (supplier follow-up after the order)
+  var poFilter = 'open';
+  function dt(v) { return v ? String(v).slice(0, 10) : '—'; }
+  function viewOrders(main) {
+    api('pos', { filter: poFilter }).then(function (r) {
+      if (!r.ok) { main.innerHTML = '<p class="empty">' + esc(errText(r)) + '</p>'; return; }
+      var items = r.items || [];
+      var late = items.filter(function (o) { return o.late; }).length;
+      if (poFilter === 'open') { state.counts.po_late = late; renderNav(); }
+      var tools = '<input type="text" class="search" id="q" placeholder="بحث برقم الأمر أو المورد أو العميل">' +
+        '<select id="pf" aria-label="عرض"><option value="open"' + (poFilter === 'open' ? ' selected' : '') + '>المفتوحة</option><option value="all"' + (poFilter === 'all' ? ' selected' : '') + '>كل الأوامر</option></select>' +
+        '<button class="btn primary" id="new-po">أمر شراء جديد</button>';
+      var rows = items.map(function (o) {
+        var s = o.supplier || {}, m = o.merchant || {};
+        return '<tr><td><b class="num">' + esc(o.po_no) + '</b><div class="label">' + time(o.created_at) + '</div></td>' +
+          '<td class="who"><b>' + esc(s.name || s.company || '—') + '</b><span class="label num">' + esc(s.phone || '') + '</span></td>' +
+          '<td class="who"><b>' + esc(m.company || m.name || '—') + '</b>' + (o.quote_no ? '<span class="label num">' + esc(o.quote_no) + '</span>' : '') + '</td>' +
+          '<td class="num">' + dt(o.ship_date) + '</td><td class="num">' + dt(o.eta) + '</td>' +
+          '<td>' + pill(POSTATUS, o.status) + (o.late ? ' <span class="pill bad">' + esc(POLATE[o.late]) + '</span>' : '') + '</td>' +
+          '<td class="actions"><button class="btn sm' + (o.late ? ' primary' : '') + '" data-open="' + o.id + '">فتح</button></td></tr>';
+      }).join('');
+      main.innerHTML = head('أوامر الشراء', 'متابعة المورد بعد الطلب: البوت بيطلب من المورد تأكيد الاستلام، ويسأله عن الجاهزية والمستندات قبل الشحن، ولو اتأخر بيبعتلك تنبيه على تيليجرام. العميل مش بيتبلغ بالتأخير إلا لما توافق.', tools) +
+        (late ? '<section class="panel"><span class="pill bad">' + late + ' أمر متأخر</span></section>' : '') +
+        '<section class="panel">' + (rows ? '<div class="table-wrap"><table><thead><tr><th>الأمر</th><th>المورد</th><th>العميل</th><th>موعد الشحن</th><th>الوصول المتوقع</th><th>الحالة</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+          : '<p class="empty">' + (poFilter === 'open' ? 'مفيش أوامر شراء مفتوحة.' : 'مفيش أوامر شراء لسه.') + '</p>') + '</section>';
+      filterRows(main, document.getElementById('q'));
+      document.getElementById('pf').onchange = function (e) { poFilter = e.target.value; go('orders'); };
+      document.getElementById('new-po').onclick = function () { poModal(null); };
+      main.querySelectorAll('[data-open]').forEach(function (b) {
+        b.onclick = function () { poModal(items.filter(function (o) { return o.id === Number(b.dataset.open); })[0]); };
+      });
+    });
+  }
+  function poModal(o) {
+    api('po_lookups').then(function (L) {
+      if (!L.ok) { toast(errText(L), true); return; }
+      var open = !o || ['delivered', 'cancelled'].indexOf(o.status) < 0;
+      var opt = function (list, sel, label) {
+        return list.map(function (x) { return '<option value="' + x.id + '"' + (String(sel) === String(x.id) ? ' selected' : '') + '>' + esc(label(x)) + '</option>'; }).join('');
+      };
+      var date = function (id, v, lbl, hint) { return '<label class="field"><span>' + lbl + '</span><input type="date" id="' + id + '" dir="ltr" value="' + esc(v ? String(v).slice(0, 10) : '') + '"' + (open ? '' : ' disabled') + '>' + (hint ? '<small>' + hint + '</small>' : '') + '</label>'; };
+      var text = function (id, v, lbl, ph) { return '<label class="field"><span>' + lbl + '</span><input type="text" id="' + id + '" value="' + esc(v || '') + '" placeholder="' + esc(ph || '') + '"' + (open ? '' : ' disabled') + '></label>'; };
+      var body = '';
+      if (o) {
+        body += '<div class="panel-head"><div><b>' + esc((o.supplier || {}).name || '') + '</b> <span class="label num">' + esc((o.supplier || {}).phone || '') + '</span></div>' + pill(POSTATUS, o.status) + (o.late ? ' <span class="pill bad">' + esc(POLATE[o.late]) + '</span>' : '') + '</div>' +
+          '<div class="chips"><span class="chip">التأكيد مطلوب قبل: <span class="num">' + time(o.confirm_by) + '</span></span>' +
+          (o.confirmed_at ? '<span class="chip">أكد: <span class="num">' + time(o.confirmed_at) + '</span></span>' : '') +
+          (o.shipped_at ? '<span class="chip">اتشحن: <span class="num">' + time(o.shipped_at) + '</span></span>' : '') +
+          (o.arrived_at ? '<span class="chip">وصل: <span class="num">' + time(o.arrived_at) + '</span></span>' : '') +
+          (o.delivered_at ? '<span class="chip">اتسلم: <span class="num">' + time(o.delivered_at) + '</span></span>' : '') + '</div>';
+      } else {
+        body += '<div class="form-row"><label class="field"><span>المورد</span><select id="po-sup"><option value="">اختار المورد…</option>' + opt(L.suppliers || [], '', function (x) { return (x.name || x.company || '') + ' · ' + x.phone; }) + '</select></label>' +
+          '<label class="field"><span>من عرض سعر (اختياري)</span><select id="po-quote"><option value="">بدون</option>' + opt(L.quotes || [], '', function (x) { return x.quote_no + ' · ' + n2(x.total); }) + '</select><small>بيملا الأصناف والعميل من العرض</small></label></div>';
+      }
+      body += '<div class="form-row"><label class="field"><span>العميل اللي هيتبلغ (اختياري)</span><select id="po-mer"' + (open ? '' : ' disabled') + '><option value="">بدون عميل</option>' + opt(L.merchants || [], o && o.merchant ? o.merchant.id : '', function (x) { return (x.company || x.name || '') + ' · ' + x.phone; }) + '</select></label>' +
+          text('po-total', o && o.total != null ? o.total : '', 'قيمة الأمر (اختياري)', '0.00') + '</div>' +
+        '<label class="field"><span>الأصناف والكميات</span><textarea id="po-items" rows="4" placeholder="- أرز سلام 40 طن&#10;- زيت عافية 500 كرتون"' + (open ? '' : ' disabled') + '>' + esc(o ? o.items : '') + '</textarea></label>' +
+        '<div class="form-row">' + date('po-ship', o && o.ship_date, 'موعد الشحن', 'قبله بيومين البوت يسأل المورد عن الجاهزية والمستندات') + date('po-eta', o && o.eta, 'الوصول المتوقع', 'لو عدّى ومفيش وصول بيجيلك تنبيه') + '</div>' +
+        '<div class="form-row">' + text('po-ref', o && o.shipment_ref, 'رقم الشحنة / البوليصة', 'MSKU…') + date('po-deliv', o && o.delivery_date, 'موعد التسليم للعميل', 'لو فاضي: بعد الوصول بيومين') + '</div>' +
+        '<div class="form-row">' + text('po-docs', o && o.docs_note, 'المستندات', 'فاتورة، قائمة تعبئة، شهادة منشأ') + text('po-notes', o && o.notes, 'ملاحظات', '') + '</div>';
+      if (!o) body += '<div class="toolbar"><label class="check">المورد يأكد خلال <input type="number" id="po-hours" min="1" max="240" value="' + esc(L.confirm_hours || 24) + '" style="max-width:80px" dir="ltr"> ساعة</label></div>';
+      if (o && (o.messages || []).length) {
+        body += '<div class="panel"><b>الرسائل</b>' + o.messages.map(function (x) { return '<div class="toolbar" style="justify-content:space-between"><span>' + esc(KIND[x.kind] || x.kind) + ' <span class="label num">' + time(x.at) + '</span></span>' + outPill(x) + '</div>'; }).join('') + '</div>';
+      }
+      body += '<div class="toolbar" id="po-actions"></div>';
+      openModal(o ? 'أمر شراء ' + esc(o.po_no) : 'أمر شراء جديد', body, function (box) {
+        var v = function (id) { var el = box.querySelector('#' + id); return el ? el.value.trim() : ''; };
+        var payload = function () {
+          var d = { merchant_id: v('po-mer'), items: v('po-items'), total: v('po-total'), ship_date: v('po-ship'), eta: v('po-eta'),
+            shipment_ref: v('po-ref'), delivery_date: v('po-deliv'), docs_note: v('po-docs'), notes: v('po-notes') };
+          if (o) d.id = o.id; else { d.supplier_id = v('po-sup'); d.quote_id = v('po-quote'); d.confirm_hours = v('po-hours'); }
+          return d;
+        };
+        var refresh = function (r) { if (r && r.po) { state.afterClose = null; closeModal(); go('orders'); poModal(r.po); } };
+        var doAct = function (name, extra, msg, ask) {
+          if (ask && !window.confirm(ask)) return;
+          act('po_action', Object.assign({ id: o.id, do: name }, extra || {}), msg).then(refresh);
+        };
+        var a = box.querySelector('#po-actions'), h = '';
+        if (!o) h += '<button class="btn primary" type="button" id="pa-create">إنشاء وإرسال للمورد</button>';
+        else if (open) {
+          h += '<button class="btn" type="button" id="pa-save">حفظ التعديلات</button>';
+          if (o.status === 'sent') h += '<button class="btn good" type="button" id="pa-confirm">المورد أكد</button>';
+          if (o.status === 'sent' || o.status === 'confirmed') h += '<button class="btn" type="button" id="pa-ready">جاهز للشحن</button>';
+          if (['sent', 'confirmed', 'ready'].indexOf(o.status) >= 0) h += '<button class="btn" type="button" id="pa-shipped">اتشحن</button>';
+          if (['sent', 'confirmed', 'ready', 'shipped'].indexOf(o.status) >= 0) h += '<button class="btn good" type="button" id="pa-arrived">وصلت الحاوية</button>';
+          if (o.status === 'arrived' || o.status === 'shipped') h += '<button class="btn good" type="button" id="pa-delivered">اتسلم للعميل</button>';
+          if (o.merchant) h += '<button class="btn" type="button" id="pa-delay">أبلغ العميل بالتأخير</button>';
+          h += '<button class="btn danger" type="button" id="pa-cancel">إلغاء الأمر</button>';
+        }
+        a.innerHTML = h;
+        var on = function (id, f) { var b = a.querySelector('#' + id); if (b) b.onclick = f; };
+        on('pa-create', function () {
+          var d = payload();
+          if (!d.supplier_id) { toast('اختار المورد', true); return; }
+          if (!d.items && !d.quote_id) { toast('اكتب الأصناف والكميات', true); return; }
+          act('po_save', d, 'اتعمل الأمر واتبعت للمورد').then(refresh);
+        });
+        on('pa-save', function () { act('po_save', payload(), 'اتحفظ').then(refresh); });
+        on('pa-confirm', function () { doAct('confirm', { ship_date: v('po-ship') }, 'اتسجل إن المورد أكد'); });
+        on('pa-ready', function () { doAct('ready', { shipment_ref: v('po-ref'), docs_note: v('po-docs') }, 'اتسجل إنه جاهز'); });
+        on('pa-shipped', function () { doAct('shipped', { shipment_ref: v('po-ref'), eta: v('po-eta') }, 'اتسجل الشحن'); });
+        on('pa-arrived', function () { doAct('arrived', { delivery_date: v('po-deliv'), notify: !!o.merchant }, o.merchant ? 'اتسجل الوصول واتبعت للعميل موعد التسليم' : 'اتسجل الوصول', o.merchant ? 'هيتبعت للعميل إن الطلب وصل وموعد التسليم ' + (v('po-deliv') || 'بعد يومين') + '. تكمل؟' : null); });
+        on('pa-delivered', function () { doAct('delivered', {}, o.merchant ? 'اتسجل التسليم، وبكرة البوت هيسأل العميل عن الاستلام والجودة' : 'اتسجل التسليم'); });
+        on('pa-delay', function () { doAct('notify_delay', { date: v('po-eta') }, 'اتبعت للعميل إن الطلب متأخر', 'هيتبعت للعميل إن طلبه متأخر' + (v('po-eta') ? ' والموعد الجديد ' + v('po-eta') : '') + '. تكمل؟'); });
+        on('pa-cancel', function () { doAct('cancel', {}, 'اتلغى الأمر', 'إلغاء الأمر ' + o.po_no + '؟ أي رسالة لسه ماتبعتتش هتتلغي والمتابعة هتقف.'); });
+        var qs = box.querySelector('#po-quote');
+        if (qs) qs.onchange = function () {
+          var q = (L.quotes || []).filter(function (x) { return String(x.id) === qs.value; })[0];
+          if (q && q.merchant_id) box.querySelector('#po-mer').value = q.merchant_id;
+          box.querySelector('#po-items').placeholder = q ? 'هتتملي من العرض ' + q.quote_no + ' لو سبتها فاضية' : '';
+        };
+      });
+      state.afterClose = function () { go('orders'); };
+    });
+  }
+
+  // ------------------------------------------------------------ bot learning
+  function viewLearning(main) {
+    Promise.all([api('lessons'), api('memories')]).then(function (res) {
+      var r = res[0], mem = res[1];
+      if (!r.ok) { main.innerHTML = '<p class="empty">' + esc(errText(r)) + '</p>'; return; }
+      var items = r.items || [];
+      var pending = items.filter(function (l) { return l.status === 'proposed'; });
+      var approved = items.filter(function (l) { return l.status === 'approved'; });
+      var rejected = items.filter(function (l) { return l.status === 'rejected'; }).slice(0, 20);
+      state.counts.lessons_pending = pending.length; renderNav();
+      var kindLine = function (l) {
+        return l.kind === 'alias' ? '<div class="label">اسم بديل: «' + esc(l.alias) + '» = ' + esc(l.product || '') + '</div>' : '';
+      };
+      var card = function (l, editable) {
+        return '<div class="msg" data-id="' + l.id + '"><div class="msg-head"><span class="pill ' + (l.status === 'approved' ? 'good' : l.status === 'rejected' ? '' : 'acc') + '">' +
+          ({ proposed: 'مقترح', approved: 'معتمد', rejected: 'مرفوض' }[l.status]) + '</span> <span class="label">' + (l.source === 'panel' ? 'أضافه ' + esc(whoApproved(l.decided_by)) : 'اقترحه البوت') + ' · ' + time(l.created_at) + '</span></div>' +
+          kindLine(l) +
+          (editable ? '<textarea rows="2" aria-label="نص الدرس">' + esc(l.text) + '</textarea>' : '<p>' + esc(l.text) + '</p>') +
+          (l.evidence ? '<div class="label">من المحادثة: ' + esc(l.evidence) + '</div>' : '') +
+          (l.note ? '<div class="label">' + esc(l.note) + '</div>' : '') +
+          '<div class="msg-actions">' +
+          (l.status === 'proposed' ? '<button class="btn primary" data-a="approve">اعتماد</button><button class="btn danger" data-a="reject">رفض</button>' : '') +
+          (l.status === 'approved' ? '<button class="btn" data-a="reject">إيقاف الدرس</button>' : '') +
+          (l.status === 'rejected' ? '<button class="btn" data-a="approve">اعتماد</button>' : '') +
+          '</div></div>';
+      };
+      var memRows = (mem.ok ? mem.items : []).map(function (m) {
+        return '<tr><td class="who"><b>' + esc(m.who || '—') + '</b><span class="label"><span class="num">' + esc(m.phone) + '</span> · ' + (m.line === 'supplier' ? 'مورد' : 'عميل') + '</span></td>' +
+          '<td style="white-space:pre-line">' + esc(m.summary) + '</td><td class="label">' + ago(m.updated_at) + '</td></tr>';
+      }).join('');
+      main.innerHTML = head('تعلّم البوت', 'كل ليلة سارة بتراجع المحادثات اللي فيها مشكلة وتقترح دروس، ومفيش درس بيشتغل غير لما تعتمده. وبعد كل محادثة بتكتب ملاحظات عن العميل عشان تفتكره المرة الجاية.' +
+          (r.learning_enabled ? '' : ' <span class="pill warn">التعلّم موقوف من الإعدادات</span>')) +
+        '<section class="panel"><h2>مستنية موافقتك (' + pending.length + ')</h2>' + (pending.length ? '<div class="msgs">' + pending.map(function (l) { return card(l, true); }).join('') + '</div>' : '<p class="empty">مفيش دروس جديدة.</p>') + '</section>' +
+        '<section class="panel"><h2>ضيف درس بنفسك</h2><p class="muted">اكتبه كأنك بتقول لسارة تعمل إيه، مثلًا: «لو العميل قال "تريلا" اسأليه عن عدد الكراتين». ممنوع أسعار أو خصومات، الأسعار بتيجي من القائمة بس.</p>' +
+          '<label class="field"><textarea id="ls-new" rows="2"></textarea></label><div class="toolbar"><button class="btn primary" id="ls-add">إضافة واعتماد</button></div></section>' +
+        '<section class="panel"><h2>الدروس المعتمدة (' + approved.length + ')</h2>' + (approved.length ? '<div class="msgs">' + approved.map(function (l) { return card(l, false); }).join('') + '</div>' : '<p class="empty">لسه مفيش دروس معتمدة.</p>') + '</section>' +
+        (rejected.length ? '<section class="panel"><h2>آخر الدروس المرفوضة</h2><div class="msgs">' + rejected.map(function (l) { return card(l, false); }).join('') + '</div></section>' : '') +
+        '<section class="panel"><h2>ذاكرة العملاء</h2><p class="muted">اللي سارة فاكراه عن كل عميل أو مورد. بيتحدث كل ساعة بعد ما المحادثة تهدى.</p>' +
+          '<input type="text" class="search" id="q" placeholder="بحث بالاسم أو الرقم">' +
+          (memRows ? '<div class="table-wrap"><table><thead><tr><th>الطرف</th><th>الملاحظات</th><th>آخر تحديث</th></tr></thead><tbody>' + memRows + '</tbody></table></div>' : '<p class="empty">لسه مفيش ملاحظات.</p>') + '</section>';
+      filterRows(main, document.getElementById('q'));
+      document.getElementById('ls-add').onclick = function () {
+        var t = document.getElementById('ls-new').value.trim();
+        if (!t) { toast('اكتب الدرس الأول', true); return; }
+        act('lesson_add', { text: t }, 'اتضاف الدرس، وسارة بتطبقه من الرسالة الجاية').then(function (x) { if (x) go('learning'); });
+      };
+      main.querySelectorAll('.msg[data-id]').forEach(function (box) {
+        box.querySelectorAll('[data-a]').forEach(function (b) {
+          b.onclick = function () {
+            var ta = box.querySelector('textarea');
+            b.disabled = true;
+            act('lesson_decide', { id: Number(box.dataset.id), do: b.dataset.a, text: ta ? ta.value : null }, b.dataset.a === 'approve' ? 'اتعتمد الدرس' : 'اتوقف الدرس')
+              .then(function (x) { if (x) go('learning'); else b.disabled = false; });
+          };
+        });
+      });
     });
   }
 
